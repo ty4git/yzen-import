@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "yzen-import": {
+      "commandName": "Project",
+      //"commandLineArgs": "--source ac.csv"
+      "commandLineArgs": "--source alfa.csv"
+    }
+  }
+}

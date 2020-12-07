@@ -131,7 +131,16 @@ namespace YzenImport.Alfa
             }
 
             var mccCodeNode = mccCodeNodes.First();
-            mccCodeName = mccCodeNode.InnerText.Split(":")[1].Trim(); //todo: check the mcc code and ":" sign and name.
+
+            var mccCodeContent = mccCodeNode.InnerText.Split(":").Select(value => value.Trim()).ToArray();
+            var valueIndex = 0;
+            if (mccCodeContent.Count() != 2 && Converters.ConvertMccCodeValue(mccCodeContent[valueIndex]) != mccCodeValue)
+            {
+                throw new InvalidMccCodeFormatException(mccCodeContent[valueIndex]);
+            }
+
+            var nameIndex = 1;
+            mccCodeName = mccCodeContent[nameIndex];
 
             mccCodesCache.TryAdd(mccCodeValue, mccCodeName);
 

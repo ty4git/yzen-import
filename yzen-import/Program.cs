@@ -14,23 +14,10 @@ namespace YzenImport
     {
         static async Task Main(string[] args)
         {
-            const string paramPrefix = "--";
-            const string sourceParamName = "source";
-
-            var sourceParam = args
-                .SkipWhile(arg => !arg.StartsWith($"{paramPrefix}{sourceParamName}"))
-                .Take(2)
-                .ToArray();
-
-            if (!sourceParam.Any())
-            {
-                throw new InvalidParameterException(sourceParamName);
-            }
-
-            var sourceParamValue = sourceParam[1];
-
+            var parameters = ParseParams(args);
+            var sourceParameter = parameters.First(param => param.Name == Constants.ParameterNames.Source);
             var mccCodesCache = await GetMccCodesCache();
-            var alfaProvider = new AlfaProvider(sourceParamValue, mccCodesCache);
+            var alfaProvider = new AlfaProvider(sourceParameter.Value, mccCodesCache);
 
             var stopWatch = new Stopwatch();
             stopWatch.Start();
@@ -43,12 +30,32 @@ namespace YzenImport
             await UpdateMccCodesFile(mccCodesCache);
         }
 
+        private static (string Name, string Value)[] ParseParams(string[] paramsRaw)
+        {
+            var paramPrefix = Constants.ParameterNames.Prefix;
+            var sourceParamName = Constants.ParameterNames.Source;
+
+            var sourceParam = paramsRaw
+                .SkipWhile(arg => !arg.StartsWith($"{paramPrefix}{sourceParamName}"))
+                .Take(2)
+                .ToArray();
+
+            if (!sourceParam.Any())
+            {
+                throw new InvalidParameterException(sourceParamName);
+            }
+
+            var paramValue = 1;
+            return new[] { (Name: sourceParamName, Value: sourceParam[paramValue]) };
+        }
+
         private static async Task<Dictionary<int, string>> GetMccCodesCache()
         {
             var mccCodesFileName = Constants.MccCodesFileName;
             var mccCodesRaw = await File.ReadAllLinesAsync(mccCodesFileName);
 
-            var mccCodes = mccCodesRaw.Skip(1)
+            var headerRow = 1;
+            var mccCodes = mccCodesRaw.Skip(headerRow)
                 .Select(mccCodeRaw =>
                 {
                     var mccCodeItems = mccCodeRaw.Split(Constants.Semicolon);
@@ -72,7 +79,7 @@ namespace YzenImport
         {
             var mccCodesFileName = Constants.MccCodesFileName;
             var mccCodesRaw = await File.ReadAllLinesAsync(mccCodesFileName);
-            var titleRaw = mccCodesRaw.First();
+            var titleRow = mccCodesRaw.First();
 
             var orderedMccCodeValues = mccCodesCache.Keys.OrderBy(key => key).ToArray();
             var orderedMccCodeRaws = orderedMccCodeValues
@@ -84,7 +91,7 @@ namespace YzenImport
                 })
                 .ToArray();
 
-            await File.WriteAllLinesAsync(Constants.MccCodesFileName, new[] { titleRaw }.Concat(orderedMccCodeRaws));
+            await File.WriteAllLinesAsync(mccCodesFileName, new[] { titleRow }.Concat(orderedMccCodeRaws));
         }
     }
 }

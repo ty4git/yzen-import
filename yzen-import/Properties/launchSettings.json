@@ -3,7 +3,7 @@
     "yzen-import": {
       "commandName": "Project",
       //"commandLineArgs": "--source ac.csv"
-      "commandLineArgs": "--source alfa.csv"
+      "commandLineArgs": "-s movementList.csv"
     }
   }
 }

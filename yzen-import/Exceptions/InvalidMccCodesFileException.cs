@@ -4,8 +4,8 @@ namespace YzenImport.Exceptions
 {
     class InvalidMccCodesFileException : Exception
     {
-        public InvalidMccCodesFileException(string fileName)
-            : base(@$"File with the MCC codes ""{fileName}"" is incorrect.")
+        public InvalidMccCodesFileException(string fileName, string mcc)
+            : base(@$"MCC code file (""{fileName}"") has invalid data ({mcc})")
         {
         }
     }

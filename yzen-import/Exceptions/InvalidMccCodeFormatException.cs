@@ -4,8 +4,8 @@ namespace YzenImport.Exceptions
 {
     class InvalidMccCodeFormatException : Exception
     {
-        public InvalidMccCodeFormatException(string mccCodeValueRaw)
-            : base(@$"MCC code ""{mccCodeValueRaw}"" has incorrect value or format. It should contain only digits.")
+        public InvalidMccCodeFormatException(string mccRaw)
+            : base(@$"MCC code ""{mccRaw}"" has incorrect value or format. It should contain only digits.")
         {
         }
     }

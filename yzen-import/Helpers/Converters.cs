@@ -4,14 +4,14 @@ namespace YzenImport.Helpers
 {
     static class Converters
     {
-        public static int ConvertMccCodeValue(string mccCodeValueRaw)
+        public static (bool Found, int Mcc) TryConvertMcc(string mccRaw)
         {
-            if (int.TryParse(mccCodeValueRaw, out var mccCodeValue))
+            if (int.TryParse(mccRaw, out var mcc))
             {
-                return mccCodeValue;
+                return (true, mcc);
             }
 
-            throw new InvalidMccCodeFormatException(mccCodeValueRaw);
+            return (false, default);
         }
     }
 }

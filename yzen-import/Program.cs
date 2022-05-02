@@ -4,7 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using YzenImport.Alfa;
+using CommandLine;
+using YzenImport.AlfaBank;
 using YzenImport.Exceptions;
 using YzenImport.Helpers;
 
@@ -14,70 +15,59 @@ namespace YzenImport
     {
         static async Task Main(string[] args)
         {
-            var parameters = ParseParams(args);
-            var sourceParameter = parameters.First(param => param.Name == Constants.ParameterNames.Source);
-            var mccCodesCache = await GetMccCodesCache();
-            var alfaProvider = new AlfaProvider(sourceParameter.Value, mccCodesCache);
+            var result = await Parser.Default
+                .ParseArguments<CmdParams>(args)
+                .WithParsedAsync(async cmdParams =>
+                {
+                    var mccCodesCache = await GetMccCache();
+                    var alfaProvider = new AlfaBankProvider(cmdParams.SpendingsDataFile, mccCodesCache);
 
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
+                    var stopWatch = new Stopwatch();
+                    stopWatch.Start();
 
-            await alfaProvider.Process();
+                    await alfaProvider.Process();
 
-            stopWatch.Stop();
-            Console.WriteLine(stopWatch.Elapsed);
+                    stopWatch.Stop();
+                    Console.WriteLine($"{nameof(Program)}.{nameof(Main)}: {stopWatch.Elapsed}");
 
-            await UpdateMccCodesFile(mccCodesCache);
+                    await UpdateMccCodesFile(mccCodesCache);
+                });
         }
 
-        private static (string Name, string Value)[] ParseParams(string[] paramsRaw)
+        private static async Task<Dictionary<int, string>> GetMccCache()
         {
-            var paramPrefix = Constants.ParameterNames.Prefix;
-            var sourceParamName = Constants.ParameterNames.Source;
-
-            var sourceParam = paramsRaw
-                .SkipWhile(arg => !arg.StartsWith($"{paramPrefix}{sourceParamName}"))
-                .Take(2)
-                .ToArray();
-
-            if (!sourceParam.Any())
-            {
-                throw new InvalidParameterException(sourceParamName);
-            }
-
-            var paramValue = 1;
-            return new[] { (Name: sourceParamName, Value: sourceParam[paramValue]) };
-        }
-
-        private static async Task<Dictionary<int, string>> GetMccCodesCache()
-        {
-            var mccCodesFileName = Constants.MccCodesFileName;
-            var mccCodesRaw = await File.ReadAllLinesAsync(mccCodesFileName);
+            var mccFileName = Constants.MccsFileName;
+            var mccCodesRaw = await File.ReadAllLinesAsync(mccFileName);
 
             var headerRow = 1;
             var mccCodes = mccCodesRaw.Skip(headerRow)
-                .Select(mccCodeRaw =>
+                .Select(mccRaw =>
                 {
-                    var mccCodeItems = mccCodeRaw.Split(Constants.Semicolon);
-                    if (mccCodeItems.Count() > 2)
+                    var mccInfo = mccRaw.Split(Constants.Semicolon);
+                    if (mccInfo.Length == 0 || mccInfo.Count() > 2)
                     {
-                        throw new InvalidMccCodesFileException(mccCodesFileName);
+                        throw new InvalidMccCodesFileException(mccFileName, mccRaw);
                     }
 
-                    var mccCodeValue = Converters.ConvertMccCodeValue(mccCodeItems[0]);
-                    var mccCodeName = mccCodeItems[1];
-                    return (Value: mccCodeValue, Name: mccCodeName);
+                    var (found, mcc) = Converters.TryConvertMcc(mccInfo[0]);
+                    if (!found)
+                    {
+                        throw new Exception($"MCC ({mcc}) is invalid format. Should be only digits.");
+                    }
+
+                    var mccDesc = mccInfo[1];
+                    return (Value: mcc, Desc: mccDesc);
                 })
                 .ToDictionary(
                     mccCode => mccCode.Value,
-                    mccCode => mccCode.Name);
+                    mccCode => mccCode.Desc);
 
             return mccCodes;
         }
 
         private static async Task UpdateMccCodesFile(IReadOnlyDictionary<int, string> mccCodesCache)
         {
-            var mccCodesFileName = Constants.MccCodesFileName;
+            var mccCodesFileName = Constants.MccsFileName;
             var mccCodesRaw = await File.ReadAllLinesAsync(mccCodesFileName);
             var titleRow = mccCodesRaw.First();
 

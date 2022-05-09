@@ -13,5 +13,10 @@ namespace YzenImport.Helpers
 
             return (false, default);
         }
+
+        public static int? ToMcc(string raw)
+        {
+            return int.TryParse(raw, out var mcc) ? (int?)mcc : null;
+        }
     }
 }

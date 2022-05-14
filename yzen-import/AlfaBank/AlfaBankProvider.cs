@@ -1,42 +1,71 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using YzenImport.Exceptions;
 
 namespace YzenImport.AlfaBank
 {
     class AlfaBankProvider
     {
-        private readonly string _spendingsFileName;
         private readonly MccsDynamicCache _mccsCache;
 
-        public AlfaBankProvider(string spendingsFileName, MccsDynamicCache mccsCache)
+        public AlfaBankProvider(MccsDynamicCache mccsCache)
         {
-            _spendingsFileName = spendingsFileName ?? throw new ArgumentNullException(nameof(spendingsFileName));
             _mccsCache = mccsCache ?? throw new ArgumentNullException(nameof(mccsCache));
-            ValidateFileExtension(_spendingsFileName);
         }
 
-        public async Task Process()
+        public async Task Process(string filename)
         {
             Console.WriteLine($"{nameof(AlfaBankProvider)}.{nameof(Process)}"); //todo: logging
 
-            var content = await OperationsContent<Operation>.FromFile(_spendingsFileName);
+            var content = await OperationsContent<Operation>.FromFile(filename);
             var extender = new MccExtender(_mccsCache);
             var extended = await extender.Extend(content);
 
-            var filename =
-                $"{Path.GetFileNameWithoutExtension(_spendingsFileName)}-out" +
-                $"{Path.GetExtension(_spendingsFileName)}";
-            await extended.ToFile(filename);
+            var outFile =
+                $"{Path.GetFileNameWithoutExtension(filename)}.out.{DateTime.Now.ToString("HH-MM-ss")}.csv";
+            await extended.ToFile(outFile);
         }
 
-        private void ValidateFileExtension(string fileName)
+        public async Task<string> Merge(string[] filenames)
         {
-            var extension = Path.GetExtension(fileName);
-            if (extension != ".csv")
+            if (filenames is null || filenames.Length == 0)
             {
-                throw new InvalidFileExtensionException();
+                throw new ArgumentNullException(nameof(filenames));
+            }
+
+            await ValidateHeaders(filenames);
+
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var encoding = Encoding.GetEncoding("windows-1251");
+
+            var firstFile = filenames[0];
+            var dir = Path.GetDirectoryName(firstFile);
+            var outfile = Path.Combine(dir,
+                $"{Path.GetFileNameWithoutExtension(firstFile)}.merged.{DateTime.Now.ToString("HH-mm-ss")}.csv");
+            var copyHeader = true;
+            foreach (var filename in filenames)
+            {
+                var lines = await File.ReadAllLinesAsync(filename, encoding);
+                var outLines = copyHeader ? lines : lines.Skip(1);
+                copyHeader = false;
+                await File.AppendAllLinesAsync(outfile, outLines, encoding);
+            }
+            return outfile;
+        }
+
+        private async Task ValidateHeaders(string[] filenames)
+        {
+            var firstHeader = new string[] { };
+            foreach (var filename in filenames)
+            {
+                var header = await OperationsContent<Operation>.GetHeader(filename);
+                firstHeader = firstHeader.Length == 0 ? header : firstHeader;
+                if (!Enumerable.SequenceEqual(firstHeader, header))
+                {
+                    throw new Exception($"Headers of files ({filenames[0]}, {filename}) are different");
+                }
             }
         }
     }

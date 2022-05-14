@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
 using YzenImport.AlfaBank;
@@ -15,12 +16,15 @@ namespace YzenImport
                 .WithParsedAsync(async cmdParams =>
                 {
                     var mccsCache = await MccsDynamicCache.FromFile();
-                    var alfaProvider = new AlfaBankProvider(cmdParams.SpendingsDataFile, mccsCache);
 
+                    var alfa = new AlfaBankProvider(mccsCache);
+
+                    var spendingsFiles = cmdParams.SpendingsDataFiles.ToArray();
+                    var merged = await alfa.Merge(spendingsFiles);
                     var stopWatch = new Stopwatch();
                     stopWatch.Start();
 
-                    await alfaProvider.Process();
+                    await alfa.Process(merged);
 
                     stopWatch.Stop();
                     Console.WriteLine($"{nameof(Program)}.{nameof(Main)}: {stopWatch.Elapsed}");

@@ -1,9 +1,8 @@
 {
   "profiles": {
     "yzen-import": {
-      "commandName": "Project",
-      //"commandLineArgs": "--source ac.csv"
-      "commandLineArgs": "-s movementList.csv"
+        "commandName": "Project",
+        "commandLineArgs": "-s movementList.csv \"movementList (1).csv\""
     }
   }
 }

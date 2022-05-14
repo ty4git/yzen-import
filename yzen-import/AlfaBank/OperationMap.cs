@@ -36,8 +36,10 @@ namespace YzenImport.AlfaBank
         }
         public ExtendedOperation(Operation op)
         {
+            Id = op.Reference;
             BankAccountName = op.BankAccountName;
             BankAccountNumber = op.BankAccountNumber;
+            BankAccountFullName = $"{op.BankAccountName} ({op.BankAccountNumber})";
             Currency = op.Currency;
             Date = op.Date;
             Reference = op.Reference;
@@ -46,6 +48,8 @@ namespace YzenImport.AlfaBank
             Outcome = op.Outcome;
         }
 
+        public string Id { get; private set; }
+        public string BankAccountFullName { get; private set; }
         public string MCC { get; set; }
         public string Category { get; set; }
     }
@@ -56,6 +60,7 @@ namespace YzenImport.AlfaBank
         {
             MemberMaps.AddMembers(new OperationMap());
 
+            Map(x => x.BankAccountFullName).Name("FullName");
             Map(x => x.MCC).Name("MCC");
             Map(x => x.Category).Name("Category");
         }
